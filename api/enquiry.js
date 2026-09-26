@@ -27,16 +27,34 @@ const FROM = process.env.ENQUIRY_FROM || "";
 
 const LIMITS = { name: 120, company: 160, situation: 4000, goal: 4000, reply: 254 };
 
-/** Best-effort throttle. Serverless instances are not shared, so this thins
- *  repeat submissions from one warm instance rather than promising a global
- *  rate limit. It is here to blunt accidental double-sends and casual abuse. */
-const seen = new Map();
+/**
+ * Best-effort throttle: at most WINDOW_MAX submissions per address per minute.
+ *
+ * Serverless instances are not shared, so this thins repeat submissions from
+ * one warm instance rather than promising a global rate limit. It is here to
+ * blunt accidental double-sends and casual abuse.
+ *
+ * Timestamps are kept per key in a list. An earlier version used the instant
+ * as part of the map key, which meant two requests in the same millisecond
+ * overwrote each other and a burst never counted past one or two.
+ */
+const WINDOW_MS = 60000;
+const WINDOW_MAX = 5;
+const hits = new Map();
+
 function throttled(key) {
   const now = Date.now();
-  for (const [k, t] of seen) if (now - t > 60000) seen.delete(k);
-  const hits = [...seen.keys()].filter((k) => k.startsWith(key + "|")).length;
-  seen.set(`${key}|${now}`, now);
-  return hits >= 5;
+  const recent = (hits.get(key) || []).filter((t) => now - t < WINDOW_MS);
+  recent.push(now);
+  hits.set(key, recent);
+
+  // A long-lived instance must not accumulate a row per address forever.
+  if (hits.size > 500) {
+    for (const [k, times] of hits) {
+      if (!times.length || now - times[times.length - 1] >= WINDOW_MS) hits.delete(k);
+    }
+  }
+  return recent.length > WINDOW_MAX;
 }
 
 /** Body text. Newlines are meaningful here, other control characters are not. */
