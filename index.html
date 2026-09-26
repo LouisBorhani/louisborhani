@@ -63,13 +63,16 @@
     --amber-hi: #D9BE74;
     --on-dark: #B6B3AA;
     --err: #F0A79C;
+    /* Real height of the sticky bar, written by script on load and resize. The
+       fallback covers the first paint and any no-JS visitor. */
+    --nav-h: 72px;
     --on-dark-hi: #DAD6CC;
     --white: #FFFFFF;
     box-sizing: border-box;
     color-scheme: light;
   }
   * { box-sizing: inherit; margin: 0; padding: 0; }
-  html { background: var(--cream); scroll-padding-top: 92px; -webkit-text-size-adjust: 100%; }
+  html { background: var(--cream); scroll-padding-top: calc(var(--nav-h, 72px) + 18px); -webkit-text-size-adjust: 100%; }
   body {
     background: var(--cream); color: var(--ink);
     font-family: 'Inter', system-ui, sans-serif;
@@ -211,8 +214,11 @@
   .router-row:hover, .router-row:focus-visible { padding-left: 14px; background: rgba(20,22,31,0.045); }
   .router-q { display: block; font-family: 'Instrument Sans', sans-serif; font-weight: 600; font-size: clamp(19px, 2.1vw, 26px); letter-spacing: -0.015em; line-height: 1.2; }
   .router-a { display: block; margin-top: 8px; font-size: 15px; line-height: 1.55; color: var(--slate); max-width: 64ch; }
-  .router-go { display: inline-block; font-family: 'Instrument Sans', sans-serif; font-size: 15px; font-weight: 700; color: var(--amber-ink); white-space: nowrap; transition: transform .18s ease, color .18s ease; }
-  .router-row:hover .router-go, .router-row:focus-visible .router-go { color: var(--ink); transform: translateX(6px); }
+  .router-go { display: block; text-align: right; transition: transform .18s ease; }
+  .router-act { display: block; font-family: 'Instrument Sans', sans-serif; font-size: 15.5px; font-weight: 700; color: var(--amber-ink); white-space: nowrap; transition: color .18s ease; }
+  .router-brand { display: block; margin-top: 4px; font-size: 12.5px; letter-spacing: 0.03em; color: var(--slate-2); white-space: nowrap; }
+  .router-row:hover .router-go, .router-row:focus-visible .router-go { transform: translateX(6px); }
+  .router-row:hover .router-act, .router-row:focus-visible .router-act { color: var(--ink); }
 
   /* HOW I WORK (dark) */
   .os-chain { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; margin: 34px 0 30px; }
@@ -280,8 +286,16 @@
     .nav-links a { padding: 15px 2px; border-top: 1px solid var(--rule); font-size: 16px; }
     .nav-cta { display: none; }
     .nav-links a.nav-menu-cta { display: flex; align-items: center; justify-content: center; margin-top: 16px; padding: 16px 20px !important; min-height: 56px; border: 1.5px solid var(--ink); border-top: 1.5px solid var(--ink) !important; border-radius: 2px; background: var(--ink); color: var(--cream); text-align: center; font-family: 'Instrument Sans', sans-serif; font-weight: 700; font-size: 17px; }
-    .router-row { grid-template-columns: 1fr; gap: 8px; padding: 22px 2px; }
-    .router-go { color: var(--amber-ink); }
+    .router-row {
+      grid-template-columns: 1fr; gap: 10px; padding: 20px 18px;
+      background: var(--cream); border: 1px solid var(--rule); border-radius: 3px;
+      margin-bottom: 12px;
+    }
+    .router-list a:last-child { border-bottom: 0; }
+    .router-row:hover, .router-row:focus-visible { padding-left: 18px; }
+    .router-row:active { background: var(--cream-2); border-color: rgba(20,22,31,0.34); }
+    .router-go { text-align: left; }
+    .router-act { font-size: 16px; }
     .foot-grid { flex-direction: column; }
   }
 
@@ -305,13 +319,48 @@
   .talk-form { margin-top: 34px; max-width: 620px; }
   .talk-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
   .talk-field { margin-top: 20px; }
+  .talk-opt { font-weight: 500; text-transform: none; letter-spacing: 0.01em; color: var(--on-dark); opacity: 0.75; }
+  .talk-hint { margin: -4px 0 9px; font-size: 13.5px; line-height: 1.5; color: var(--on-dark); }
+
+  /* Help-type choice. Real radios, styled as a wrap-around segmented set, so
+     it stays keyboard and screen-reader native on a phone. */
+  .talk-choice { border: 0; padding: 0; margin-top: 22px; }
+  .talk-choice legend { padding: 0; font-family: 'Instrument Sans', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--on-dark); margin-bottom: 11px; }
+  .choice-row { display: flex; flex-wrap: wrap; gap: 10px; }
+  .talk-choice .choice-row input { position: absolute; width: 1px; height: 1px; min-width: 0; padding: 0; margin: 0; opacity: 0; border: 0; }
+  .choice-row label {
+    display: inline-flex; align-items: center; min-height: 46px; padding: 11px 18px; cursor: pointer;
+    font-family: 'Instrument Sans', sans-serif; font-size: 15px; font-weight: 600; color: var(--cream);
+    background: rgba(247,244,237,0.06); border: 1.5px solid var(--rule-dark); border-radius: 2px;
+    transition: background .15s ease, border-color .15s ease, color .15s ease;
+  }
+  .choice-row label:hover { border-color: rgba(247,244,237,0.45); background: rgba(247,244,237,0.1); }
+  .talk-choice .choice-row input:checked + label { background: var(--cream); border-color: var(--cream); color: var(--ink); }
+  .talk-choice .choice-row input:focus-visible + label { outline: 2px solid var(--amber-hi); outline-offset: 3px; }
+
+  /* File control. The input stays in the tab order and keeps its focus ring;
+     the label is only the visible surface for it. */
+  .talk-field input.talk-file-input { position: absolute; width: 1px; height: 1px; min-width: 0; padding: 0; margin: 0; opacity: 0; border: 0; }
+  .talk-file-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .talk-file-btn {
+    display: inline-flex; align-items: center; min-height: 48px; padding: 12px 22px; cursor: pointer;
+    font-family: 'Instrument Sans', sans-serif; font-size: 15px; font-weight: 600; color: var(--cream);
+    background: rgba(247,244,237,0.06); border: 1.5px solid var(--rule-dark); border-radius: 2px;
+    transition: background .15s ease, border-color .15s ease;
+  }
+  .talk-file-btn:hover { border-color: rgba(247,244,237,0.45); background: rgba(247,244,237,0.1); }
+  .talk-field input.talk-file-input:focus-visible + .talk-file-row .talk-file-btn { outline: 2px solid var(--amber-hi); outline-offset: 3px; }
+  .talk-file-name { font-size: 14.5px; color: var(--on-dark-hi); word-break: break-all; }
+  .talk-file-clear { background: none; border: 0; padding: 6px 2px; cursor: pointer; font-family: inherit; font-size: 14px; color: var(--on-dark); border-bottom: 1.5px solid var(--amber-hi); }
+  .talk-file-clear:hover { color: var(--white); }
+
   .talk-field label { display: block; font-family: 'Instrument Sans', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--on-dark); margin-bottom: 9px; }
   .talk-field input, .talk-field textarea {
     width: 100%; font-family: inherit; font-size: 16.5px; line-height: 1.55; color: var(--white);
     background: rgba(247,244,237,0.05); border: 1px solid var(--rule-dark); border-radius: 2px;
     padding: 12px 14px; transition: border-color .15s ease, background .15s ease;
   }
-  .talk-field textarea { resize: vertical; min-height: 96px; }
+  .talk-field textarea { resize: vertical; height: 132px; min-height: 96px; }
   .talk-field input:hover, .talk-field textarea:hover { border-color: rgba(247,244,237,0.3); }
   .talk-field input:focus, .talk-field textarea:focus { outline: none; border-color: var(--amber-hi); background: rgba(247,244,237,0.08); }
   .talk-field input[aria-invalid="true"], .talk-field textarea[aria-invalid="true"] { border-color: var(--err); }
@@ -329,12 +378,20 @@
   button.btn[disabled] { opacity: 0.6; cursor: default; }
   @media (max-width: 620px) {
     .talk-row { grid-template-columns: 1fr; }
+    .choice-row label { flex: 1 1 100%; justify-content: center; }
+    .talk-file-btn { width: 100%; justify-content: center; }
+    .talk-file-row { gap: 10px; }
     /* The strongest conversion control on the page gets the full width, and
        the reassurance line sits under it rather than squeezed beside it. */
     .talk-submit { flex-direction: column; align-items: stretch; gap: 14px; }
     .talk-submit .btn { width: 100%; padding: 19px 28px; min-height: 64px; }
     .talk-note { text-align: center; }
   }
+
+  /* Belt and braces with scroll-padding above: Safari has historically
+     honoured scroll-margin on the target more reliably than scroll-padding on
+     the scroller, and #talk is reached by focus() as well as by the hash. */
+  section[id], header[id], #talk, #main { scroll-margin-top: calc(var(--nav-h, 72px) + 18px); }
 
   [hidden] { display: none !important; }
 
@@ -514,35 +571,50 @@
           <span class="router-q">My business needs strengthening</span>
           <span class="router-a">See where owner dependency, resilience and commercial risk actually sit. Business health review, &pound;49.</span>
         </span>
-        <span class="router-go">Clarity &rarr;</span>
+        <span class="router-go">
+          <span class="router-act">Review my business &rarr;</span>
+          <span class="router-brand">Clarity Intelligence</span>
+        </span>
       </a>
       <a class="router-row" href="https://clarityadvisorypartners.com/exit-ready-scorecard" target="_blank" rel="noopener" onclick="trackEvent('route_exit')">
         <span>
           <span class="router-q">I'm thinking about selling</span>
           <span class="router-a">An honest read on what a buyer would find, before you start the conversation. Free scorecard.</span>
         </span>
-        <span class="router-go">Exit-ready &rarr;</span>
+        <span class="router-go">
+          <span class="router-act">Check my exit readiness &rarr;</span>
+          <span class="router-brand">Clarity Intelligence</span>
+        </span>
       </a>
       <a class="router-row" href="https://easytalentgroup.com" target="_blank" rel="noopener" onclick="trackEvent('route_workforce')">
         <span>
           <span class="router-q">I need people, and I need them vetted</span>
           <span class="router-a">Catering, facilities, cleaning and hospitality staff into education and the public sector.</span>
         </span>
-        <span class="router-go">Easy Talent &rarr;</span>
+        <span class="router-go">
+          <span class="router-act">Find vetted people &rarr;</span>
+          <span class="router-brand">Easy Talent</span>
+        </span>
       </a>
       <a class="router-row" href="https://recruitment.louisborhani.com" target="_blank" rel="noopener" onclick="trackEvent('route_candidate')">
         <span>
           <span class="router-q">I'm applying for a job</span>
           <span class="router-a">Find out whether your CV would actually get shortlisted for the specific role you want.</span>
         </span>
-        <span class="router-go">Recruitment Intelligence &rarr;</span>
+        <span class="router-go">
+          <span class="router-act">Check my CV &rarr;</span>
+          <span class="router-brand">Recruitment Intelligence</span>
+        </span>
       </a>
       <a class="router-row" href="https://recruitment.louisborhani.com" target="_blank" rel="noopener" onclick="trackEvent('route_employer')">
         <span>
           <span class="router-q">I'm hiring and the role isn't defined properly yet</span>
           <span class="router-a">Turn a rough brief into a job description, advert, screening criteria and interview questions.</span>
         </span>
-        <span class="router-go">Recruitment Intelligence &rarr;</span>
+        <span class="router-go">
+          <span class="router-act">Get hiring support &rarr;</span>
+          <span class="router-brand">Recruitment Intelligence</span>
+        </span>
       </a>
       <!-- FUTURE — the intelligence-report entry point belongs here, as one more router
            row ("What opportunities is your business missing?") feeding a dedicated route.
@@ -554,7 +626,9 @@
           <span class="router-q">The business itself needs fixing</span>
           <span class="router-a">Growth, people, commercial performance, operations or technology are tangled together.</span>
         </span>
-        <span class="router-go">Talk it through with Louis &rarr;</span>
+        <span class="router-go">
+          <span class="router-act">Talk it through with Louis &rarr;</span>
+        </span>
       </a>
     </div>
   </div>
@@ -635,7 +709,13 @@
       </div>
     </div>
 
-    <p class="think-foot">Episodes go out on <a href="https://www.tiktok.com/@louis.hires" target="_blank" rel="noopener" onclick="trackEvent('social_tiktok_click')">TikTok</a>, written pieces on <a href="https://www.linkedin.com/in/louis-borhani/" target="_blank" rel="noopener" onclick="trackEvent('social_linkedin_click')">LinkedIn</a>. The ones worth keeping will live here.</p>
+    <p class="think-foot">Recruitment and career episodes go out on <a href="https://www.tiktok.com/@louis.hires" target="_blank" rel="noopener" onclick="trackEvent('social_tiktok_click')">TikTok</a>, written pieces on <a href="https://www.linkedin.com/in/louis-borhani/" target="_blank" rel="noopener" onclick="trackEvent('social_linkedin_click')">LinkedIn</a>. The ones worth keeping will live here.</p>
+    <!-- PENDING LOUIS — business/operator content (growth, commercial, AI, Louis OS,
+         systems, operating models) belongs on Instagram, alongside the recruitment
+         and career content on TikTok. The Instagram profile URL is not in this
+         repository and has not been supplied, so the second route is deliberately
+         not built: a "Business insights" link with nowhere correct to go is worse
+         than no link. Supply the URL and this becomes two labelled routes. -->
   </div>
 </section>
 
@@ -684,7 +764,7 @@
             <p class="talk-error" id="e-name" hidden>Please add your name.</p>
           </div>
           <div class="talk-field">
-            <label for="f-company">Company</label>
+            <label for="f-company">Company or organisation <span class="talk-opt">optional</span></label>
             <input id="f-company" name="company" type="text" autocomplete="organization" maxlength="160">
           </div>
         </div>
@@ -693,14 +773,43 @@
           <input id="f-reply" name="reply" type="email" autocomplete="email" maxlength="254" required>
           <p class="talk-error" id="e-reply" hidden>Please add an email address I can reply to.</p>
         </div>
+        <fieldset class="talk-field talk-choice">
+          <legend>What would you like help with?</legend>
+          <div class="choice-row">
+            <input type="radio" id="h-business" name="help" value="My business">
+            <label for="h-business">My business</label>
+            <input type="radio" id="h-hiring" name="help" value="Hiring or recruitment">
+            <label for="h-hiring">Hiring or recruitment</label>
+            <input type="radio" id="h-cv" name="help" value="CV or job search">
+            <label for="h-cv">CV or job search</label>
+            <input type="radio" id="h-one" name="help" value="One-to-one support">
+            <label for="h-one">One-to-one support</label>
+            <input type="radio" id="h-other" name="help" value="Something else">
+            <label for="h-other">Something else</label>
+          </div>
+        </fieldset>
         <div class="talk-field">
-          <label for="f-situation">What&rsquo;s going on?</label>
-          <textarea id="f-situation" name="situation" rows="3" maxlength="4000" required></textarea>
-          <p class="talk-error" id="e-situation" hidden>Please tell me what is going on.</p>
+          <label for="f-situation">Tell me a little more</label>
+          <p class="talk-hint" id="hint-situation">What are you working through, trying to improve or looking for help with?</p>
+          <textarea id="f-situation" name="situation" rows="3" maxlength="4000" aria-describedby="hint-situation" required></textarea>
+          <p class="talk-error" id="e-situation" hidden>Please tell me a little about what you need.</p>
         </div>
         <div class="talk-field">
-          <label for="f-goal">What are you trying to achieve?</label>
-          <textarea id="f-goal" name="goal" rows="3" maxlength="4000"></textarea>
+          <label for="f-goal">What would a useful outcome look like? <span class="talk-opt">optional</span></label>
+          <p class="talk-hint" id="hint-goal">What would you like to be different as a result?</p>
+          <textarea id="f-goal" name="goal" rows="3" maxlength="4000" aria-describedby="hint-goal"></textarea>
+        </div>
+        <div class="talk-field">
+          <label for="f-file">Attach a file <span class="talk-opt">optional</span></label>
+          <p class="talk-hint" id="hint-file">CV, brief, proposal or supporting document. PDF, DOC or DOCX, up to 3&nbsp;MB.</p>
+          <input class="talk-file-input" id="f-file" name="file" type="file" aria-describedby="hint-file"
+                 accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+          <span class="talk-file-row">
+            <label class="talk-file-btn" for="f-file">Choose a file</label>
+            <span class="talk-file-name" id="f-file-name"></span>
+            <button class="talk-file-clear" type="button" id="f-file-clear" hidden>Remove</button>
+          </span>
+          <p class="talk-error" id="e-file" hidden></p>
         </div>
         <div class="talk-hp" aria-hidden="true">
           <label for="f-website">Leave this empty</label>
@@ -710,7 +819,7 @@
           <button class="btn btn-solid" type="submit" id="talk-send">Send it to Louis</button>
           <p class="talk-note">Goes straight to me. No newsletter, no sequence, no CRM.</p>
         </div>
-        <p class="talk-privacy">I&rsquo;ll only use these details to respond to your enquiry.</p>
+        <p class="talk-privacy">I&rsquo;ll only use the information and files you send to respond to your enquiry.</p>
         <p class="talk-status" id="talk-status" role="status" aria-live="polite"></p>
       </form>
     </div>
@@ -731,7 +840,7 @@
         <a href="https://clarityadvisorypartners.com" target="_blank" rel="noopener">Clarity</a>
         <a href="https://recruitment.louisborhani.com" target="_blank" rel="noopener">Recruitment Intelligence</a>
         <a href="https://www.linkedin.com/in/louis-borhani/" target="_blank" rel="noopener" onclick="trackEvent('social_linkedin_click')">LinkedIn</a>
-        <a href="https://www.tiktok.com/@louis.hires" target="_blank" rel="noopener" onclick="trackEvent('social_tiktok_click')">TikTok</a>
+        <a href="https://www.tiktok.com/@louis.hires" target="_blank" rel="noopener" onclick="trackEvent('social_tiktok_click')">TikTok &middot; career advice</a>
         <a href="mailto:hello@louisborhani.com">Contact</a>
       </div>
     </div>
@@ -760,6 +869,24 @@
       }
     } catch (e) {}
   }
+
+  /* Publish the sticky bar's real height so anchored sections clear it exactly,
+     at any width, instead of guessing a constant that is wrong on one of them.
+     The open mobile menu is absolutely positioned and so never counts toward
+     it, which is what we want: the bar closes before the jump lands. */
+  (function () {
+    var nav = document.getElementById('site-nav');
+    if (!nav) { return; }
+    function measure() {
+      var h = Math.round(nav.getBoundingClientRect().height);
+      if (h > 0) { document.documentElement.style.setProperty('--nav-h', h + 'px'); }
+    }
+    measure();
+    window.addEventListener('resize', measure);
+    window.addEventListener('orientationchange', function () { setTimeout(measure, 250); });
+    if (document.fonts && document.fonts.ready) { document.fonts.ready.then(measure); }
+    if (window.visualViewport) { window.visualViewport.addEventListener('resize', measure); }
+  })();
 
   (function () {
     var nav = document.getElementById('site-nav');
@@ -819,6 +946,62 @@
       { id: 'f-situation', err: 'e-situation', check: function (v) { return v.length > 0; } }
     ];
 
+    /* One optional document, read in the browser and posted as base64 inside
+       the existing JSON request. 3MB raw keeps the encoded body inside the
+       platform's request limit; the server re-checks all of this. */
+    var MAX_BYTES = 3 * 1024 * 1024;
+    var ALLOWED = { pdf: 1, doc: 1, docx: 1 };
+    var fileInput = document.getElementById('f-file');
+    var fileName = document.getElementById('f-file-name');
+    var fileClear = document.getElementById('f-file-clear');
+    var fileErr = document.getElementById('e-file');
+    var chosen = null;
+
+    function fileProblem(msg) {
+      chosen = null;
+      fileInput.value = '';
+      fileName.textContent = '';
+      fileClear.hidden = true;
+      fileErr.textContent = msg;
+      fileErr.hidden = false;
+    }
+    function resetFile() {
+      chosen = null;
+      fileInput.value = '';
+      fileName.textContent = '';
+      fileClear.hidden = true;
+      fileErr.hidden = true;
+    }
+    if (fileInput) {
+      fileInput.addEventListener('change', function () {
+        fileErr.hidden = true;
+        var f = fileInput.files && fileInput.files[0];
+        if (!f) { resetFile(); return; }
+        var ext = (f.name.split('.').pop() || '').toLowerCase();
+        if (!ALLOWED[ext]) { fileProblem('That file type is not accepted. Please attach a PDF, DOC or DOCX.'); return; }
+        if (f.size > MAX_BYTES) { fileProblem('That file is larger than 3MB. Please attach a smaller one.'); return; }
+        if (f.size === 0) { fileProblem('That file appears to be empty.'); return; }
+        chosen = f;
+        fileName.textContent = f.name + ' (' + Math.max(1, Math.round(f.size / 1024)) + 'KB)';
+        fileClear.hidden = false;
+        trackEvent('enquiry_file_added');
+      });
+      fileClear.addEventListener('click', function () { resetFile(); fileInput.focus(); });
+    }
+
+    Array.prototype.forEach.call(document.querySelectorAll('.choice-row input'), function (r) {
+      r.addEventListener('change', function () { trackEvent('enquiry_help_type_selected'); });
+    });
+
+    function readFile(f) {
+      return new Promise(function (resolve, reject) {
+        var fr = new FileReader();
+        fr.onload = function () { resolve(String(fr.result).split(',')[1] || ''); };
+        fr.onerror = function () { reject(new Error('read')); };
+        fr.readAsDataURL(f);
+      });
+    }
+
     function val(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
 
     function mark(f, ok) {
@@ -875,9 +1058,11 @@
       say('');
       if (!validate()) { return; }
 
+      var picked = document.querySelector('.choice-row input:checked');
       var payload = {
         name: val('f-name'), company: val('f-company'),
         reply: val('f-reply'), situation: val('f-situation'), goal: val('f-goal'),
+        help: picked ? picked.value : '',
         website: val('f-website')
       };
 
@@ -885,14 +1070,20 @@
       button.disabled = true;
       button.textContent = 'Sending\u2026';
 
-      fetch('/api/enquiry', {
+      (chosen ? readFile(chosen).then(function (b64) {
+        payload.fileName = chosen.name;
+        payload.fileData = b64;
+      }).catch(function () { /* send the enquiry without it rather than losing it */ }) : Promise.resolve())
+      .then(function () {
+      return fetch('/api/enquiry', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
-      }).then(function (r) {
+      }); }).then(function (r) {
         if (r.ok) {
           trackEvent('enquiry_sent');
           form.reset();
+          resetFile();
           button.textContent = 'Send it to Louis';
           say('Sent. It comes straight to me and I will come back to you personally.', 'ok');
           return;
@@ -900,6 +1091,8 @@
         button.disabled = false;
         button.textContent = 'Send it to Louis';
         if (r.status === 429) { say('That has already been sent. Give it a moment.', 'bad'); return; }
+        if (r.status === 413) { say('That attachment is too large to send. Please try one under 3MB.', 'bad'); return; }
+        if (r.status === 415) { say('That file type is not accepted. Please attach a PDF, DOC or DOCX.', 'bad'); return; }
         fallback(payload);
       }).catch(function () {
         button.disabled = false;

@@ -25,7 +25,73 @@
 const TO = process.env.ENQUIRY_TO || "";
 const FROM = process.env.ENQUIRY_FROM || "";
 
-const LIMITS = { name: 120, company: 160, situation: 4000, goal: 4000, reply: 254 };
+const LIMITS = { name: 120, company: 160, situation: 4000, goal: 4000, reply: 254, help: 40 };
+
+/**
+ * One optional document, carried as base64 inside the JSON body rather than
+ * multipart, so the endpoint stays dependency-free on a project with no
+ * package.json. 3MB raw is the ceiling: base64 inflates by a third, and the
+ * platform caps a serverless request body at 4.5MB.
+ *
+ * Nothing is stored. The bytes live in memory for the length of one request,
+ * go out as a Resend attachment, and are gone. There is no bucket, no
+ * database and no path exposed to anyone.
+ */
+const MAX_FILE_BYTES = 3 * 1024 * 1024;
+
+/* Extension must agree with the leading bytes. A DOCX is a zip, so PK alone
+ * cannot separate it from an archive — the extension has to carry that, and
+ * .zip is simply not in the list. */
+const FILE_TYPES = {
+  pdf:  { mime: 'application/pdf', magic: [[0x25, 0x50, 0x44, 0x46]] },
+  doc:  { mime: 'application/msword', magic: [[0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1]] },
+  docx: { mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          magic: [[0x50, 0x4B, 0x03, 0x04], [0x50, 0x4B, 0x05, 0x06], [0x50, 0x4B, 0x07, 0x08]] },
+};
+
+/**
+ * Strip every path component and anything that is not plainly a filename.
+ *
+ * Denies rather than allowlists so an accented name survives intact — a CV
+ * called "résumé.pdf" should not arrive as "rsum.pdf". What is removed is
+ * what is actually dangerous: path separators, control characters, and the
+ * characters that break filenames or headers.
+ */
+function safeName(raw, ext) {
+  const base = String(raw || '').split(/[\\/]/).pop().replace(/\.[^.]*$/, '');
+  const clean = base
+    .replace(/[\u0000-\u001F\u007F]/g, '')
+    .replace(/[<>:"|?*\\/]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 80);
+  return (clean || 'attachment') + '.' + ext;
+}
+
+/**
+ * Returns { attachment, name } on success, or { error, status } to refuse.
+ * Refuses on any disagreement between what was claimed and what arrived.
+ */
+function checkFile(rawName, rawData) {
+  const ext = String(rawName || '').split('.').pop().toLowerCase();
+  const spec = FILE_TYPES[ext];
+  if (!spec) return { error: 'Unsupported file type.', status: 415 };
+
+  if (typeof rawData !== 'string' || !/^[A-Za-z0-9+/]+={0,2}$/.test(rawData)) {
+    return { error: 'Invalid attachment.', status: 400 };
+  }
+  let buf;
+  try { buf = Buffer.from(rawData, 'base64'); } catch { return { error: 'Invalid attachment.', status: 400 }; }
+
+  if (!buf.length) return { error: 'Attachment is empty.', status: 400 };
+  if (buf.length > MAX_FILE_BYTES) return { error: 'Attachment is too large.', status: 413 };
+
+  const matches = spec.magic.some((sig) => sig.every((byte, i) => buf[i] === byte));
+  if (!matches) return { error: 'That file does not look like a ' + ext.toUpperCase() + '.', status: 415 };
+
+  return { attachment: { filename: safeName(rawName, ext), content: rawData, contentType: spec.mime },
+           name: safeName(rawName, ext) };
+}
 
 /**
  * Best-effort throttle: at most WINDOW_MAX submissions per address per minute.
@@ -98,6 +164,7 @@ module.exports = async (req, res) => {
   const reply = headerSafe(body.reply, LIMITS.reply);
   const situation = clean(body.situation, LIMITS.situation);
   const goal = clean(body.goal, LIMITS.goal);
+  const help = headerSafe(body.help, LIMITS.help);
 
   const missing = [];
   if (!name) missing.push("name");
@@ -112,6 +179,16 @@ module.exports = async (req, res) => {
     return res.status(429).json({ error: "That has been sent already. Give it a moment." });
   }
 
+  // Validate the attachment before doing anything else with it.
+  let attachment = null;
+  let attachmentName = "";
+  if (body.fileData || body.fileName) {
+    const checked = checkFile(body.fileName, body.fileData);
+    if (checked.error) return res.status(checked.status).json({ error: checked.error });
+    attachment = checked.attachment;
+    attachmentName = checked.name;
+  }
+
   const key = process.env.RESEND_API_KEY;
   if (!key || !TO || !FROM) {
     // Not configured. Say so plainly so the page can fall back rather than
@@ -122,18 +199,20 @@ module.exports = async (req, res) => {
   }
 
   const text = [
-    `Name:      ${name}`,
-    `Company:   ${company || "—"}`,
-    `Email:     ${reply}`,
+    `Name:       ${name}`,
+    `Company:    ${company || "—"}`,
+    `Email:      ${reply}`,
+    `Help type:  ${help || "—"}`,
     "",
-    "What's going on?",
+    "Tell me a little more",
     situation,
     "",
-    "What are you trying to achieve?",
+    "What would a useful outcome look like?",
     goal || "—",
     "",
-    `Submitted: ${new Date().toISOString().replace("T", " ").replace(/\.\d+Z$/, " UTC")}`,
-    "Source:    louisborhani.com",
+    `Attachment: ${attachmentName || "none"}`,
+    `Submitted:  ${new Date().toISOString().replace("T", " ").replace(/\.\d+Z$/, " UTC")}`,
+    "Source:     louisborhani.com",
   ].join("\n");
 
   try {
@@ -150,6 +229,7 @@ module.exports = async (req, res) => {
         // Plain text only. No html field is ever sent, so nothing a visitor
         // types can render as markup in the inbox.
         text,
+        ...(attachment ? { attachments: [attachment] } : {}),
       }),
     });
     if (!r.ok) {
