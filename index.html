@@ -122,8 +122,8 @@
   .nav-links { display: flex; gap: 30px; font-size: 14.5px; font-weight: 500; color: var(--slate); }
   .nav-links a:hover { color: var(--ink); }
   .nav-actions { display: flex; align-items: center; gap: 12px; }
-  .nav-cta { font-size: 14px; font-weight: 600; padding: 10px 18px; border: 1px solid var(--ink); border-radius: 2px; white-space: nowrap; }
-  .nav-cta:hover { background: var(--ink); color: var(--cream); }
+  .nav-cta { font-size: 14.5px; font-weight: 600; padding: 11px 20px; border: 1px solid var(--ink); border-radius: 2px; white-space: nowrap; background: var(--ink); color: var(--cream); transition: background .15s ease, box-shadow .15s ease; }
+  .nav-cta:hover { background: #000; box-shadow: 0 2px 0 0 var(--amber); }
   .nav-toggle { display: none; align-items: center; gap: 8px; cursor: pointer; background: none; border: 1px solid var(--rule); border-radius: 2px; color: var(--ink); font-family: inherit; font-size: 13.5px; font-weight: 600; padding: 10px 13px; }
   .nav-bars { display: inline-block; width: 15px; height: 9px; position: relative; }
   .nav-bars::before, .nav-bars::after { content: ""; position: absolute; left: 0; right: 0; height: 1.5px; background: currentColor; transition: transform .2s ease; }
@@ -150,15 +150,23 @@
   .portrait img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%; }
   .portrait figcaption { margin-top: 12px; font-size: 12.5px; color: var(--slate-2); letter-spacing: 0.02em; }
 
-  .btn { display: inline-block; font-family: 'Instrument Sans', sans-serif; font-size: 15px; font-weight: 600; padding: 14px 24px; border-radius: 2px; border: 1px solid transparent; transition: background .15s ease, color .15s ease, border-color .15s ease; }
+  .btn { display: inline-block; font-family: 'Instrument Sans', sans-serif; font-size: 16px; font-weight: 600; line-height: 1.6; letter-spacing: -0.005em; padding: 15px 26px; border-radius: 2px; border: 1px solid transparent; transition: background .15s ease, color .15s ease, border-color .15s ease, transform .15s ease, box-shadow .15s ease; }
+  /* PRIMARY. One action language: the strongest solid available on whatever
+     band it sits on — ink on light, cream on dark. Amber is never the fill,
+     only the accent that appears as the button lifts. */
   .btn-solid { background: var(--ink); color: var(--cream); }
-  .btn-solid:hover { background: #000; }
-  .btn-line { border-color: var(--ink); color: var(--ink); }
-  .btn-line:hover { background: var(--ink); color: var(--cream); }
-  .band-dark .btn-solid { background: var(--amber); color: var(--ink); }
-  .band-dark .btn-solid:hover { background: var(--amber-hi); }
-  .band-dark .btn-line { border-color: rgba(247,244,237,0.4); color: var(--cream); }
-  .band-dark .btn-line:hover { background: var(--cream); color: var(--ink); }
+  .btn-solid:hover { background: #000; transform: translateY(-1px); box-shadow: 0 2px 0 0 var(--amber); }
+  .btn-solid:active { transform: translateY(0); box-shadow: none; }
+
+  /* SECONDARY. Deliberately quieter: no fill, and a rule-weight border rather
+     than the full ink outline, which read almost as strongly as the primary. */
+  .btn-line { border-color: var(--rule); color: var(--ink); background: transparent; }
+  .btn-line:hover { border-color: var(--ink); background: rgba(20,22,31,0.04); }
+
+  .band-dark .btn-solid { background: var(--cream); color: var(--ink); }
+  .band-dark .btn-solid:hover { background: var(--white); transform: translateY(-1px); box-shadow: 0 2px 0 0 var(--amber-hi); }
+  .band-dark .btn-line { border-color: rgba(247,244,237,0.28); color: var(--cream); background: transparent; }
+  .band-dark .btn-line:hover { border-color: var(--cream); background: rgba(247,244,237,0.07); }
 
   /* STORY */
   .story-grid { display: grid; grid-template-columns: 0.34fr 1fr; gap: clamp(28px, 5vw, 72px); align-items: start; }
@@ -192,13 +200,13 @@
   .link-note { font-size: 13.5px; color: var(--slate-2); }
 
   /* ROUTER */
-  .router-row { display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: center; padding: 26px 4px; border-top: 1px solid var(--rule); transition: padding-left .18s ease; }
+  .router-row { display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: center; padding: 26px 4px; border-top: 1px solid var(--rule); transition: padding-left .18s ease, background .18s ease; }
   .router-list a:last-child { border-bottom: 1px solid var(--rule); }
-  .router-row:hover, .router-row:focus-visible { padding-left: 12px; }
+  .router-row:hover, .router-row:focus-visible { padding-left: 12px; background: rgba(20,22,31,0.03); }
   .router-q { display: block; font-family: 'Instrument Sans', sans-serif; font-weight: 600; font-size: clamp(19px, 2.1vw, 26px); letter-spacing: -0.015em; line-height: 1.2; }
   .router-a { display: block; margin-top: 8px; font-size: 15px; line-height: 1.55; color: var(--slate); max-width: 64ch; }
-  .router-go { font-family: 'Instrument Sans', sans-serif; font-size: 14px; font-weight: 600; color: var(--amber-ink); white-space: nowrap; }
-  .router-row:hover .router-go { color: var(--ink); }
+  .router-go { display: inline-block; font-family: 'Instrument Sans', sans-serif; font-size: 14px; font-weight: 600; color: var(--amber-ink); white-space: nowrap; transition: transform .18s ease, color .18s ease; }
+  .router-row:hover .router-go, .router-row:focus-visible .router-go { color: var(--ink); transform: translateX(4px); }
 
   /* HOW I WORK (dark) */
   .os-chain { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; margin: 34px 0 30px; }
@@ -254,7 +262,8 @@
     .portrait { order: -1; }
     .portrait figure { aspect-ratio: 5 / 4; }
     .portrait img { object-position: 50% 10%; }
-    .hero-actions .btn { width: 100%; text-align: center; }
+    .hero-actions { gap: 14px; }
+    .hero-actions .btn { width: 100%; text-align: center; padding: 16px 26px; }
     .nav-toggle { display: inline-flex; }
     .nav-links {
       display: none; position: absolute; left: 0; right: 0; top: 100%;
@@ -264,7 +273,7 @@
     nav.nav-open .nav-links { display: flex; }
     .nav-links a { padding: 15px 2px; border-top: 1px solid var(--rule); font-size: 16px; }
     .nav-cta { display: none; }
-    .nav-menu-cta { display: block; margin-top: 12px; padding: 14px 18px !important; border: 1px solid var(--ink); border-top: 1px solid var(--ink) !important; text-align: center; font-weight: 600; }
+    .nav-menu-cta { display: block; margin-top: 14px; padding: 15px 18px !important; border: 1px solid var(--ink); border-top: 1px solid var(--ink) !important; border-radius: 2px; background: var(--ink); color: var(--cream); text-align: center; font-weight: 600; font-size: 16px; }
     .router-row { grid-template-columns: 1fr; gap: 8px; padding: 22px 2px; }
     .router-go { color: var(--amber-ink); }
     .foot-grid { flex-direction: column; }
@@ -312,11 +321,18 @@
   .talk-status.is-bad { color: var(--err); }
   button.btn { cursor: pointer; font-family: 'Instrument Sans', sans-serif; }
   button.btn[disabled] { opacity: 0.6; cursor: default; }
-  @media (max-width: 620px) { .talk-row { grid-template-columns: 1fr; } }
+  @media (max-width: 620px) {
+    .talk-row { grid-template-columns: 1fr; }
+    /* The strongest conversion control on the page gets the full width, and
+       the reassurance line sits under it rather than squeezed beside it. */
+    .talk-submit { flex-direction: column; align-items: stretch; gap: 14px; }
+    .talk-submit .btn { width: 100%; padding: 16px 26px; }
+    .talk-note { text-align: center; }
+  }
 
   [hidden] { display: none !important; }
 
-  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } .btn-solid:hover, .nav-cta:hover, .router-row:hover .router-go { transform: none; } }
 </style>
 </head>
 <body>
@@ -576,7 +592,7 @@
     </div>
 
     <div style="margin-top:46px">
-      <a class="btn btn-solid" href="#talk" onclick="trackEvent('how_i_work_click')">Show me what this could look like in my business</a>
+      <a class="btn btn-line" href="#talk" onclick="trackEvent('how_i_work_click')">Show me what this could look like in my business</a>
     </div>
   </div>
 </section>
