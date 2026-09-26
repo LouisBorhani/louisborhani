@@ -274,6 +274,11 @@
   .nav-links a::after, .foot-links a::after, .think-foot a::after { content: ""; position: absolute; left: 0; right: 0; top: -11px; bottom: -11px; }
   @media (max-width: 760px) { .nav-links a::after { top: 0; bottom: 0; } .foot-links a { padding: 6px 0; } }
 
+  /* the question a visitor actually arrives with, set as the entry's proposition */
+  .entry .proposition { margin-top: 20px; font-family: 'Fraunces', Georgia, serif; font-size: clamp(19px, 1.85vw, 23.5px); line-height: 1.45; color: var(--ink); max-width: 44ch; }
+
+  [hidden] { display: none !important; }
+
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
@@ -410,11 +415,14 @@
         </div>
         <div>
           <h3>Recruitment Intelligence</h3>
-          <p class="problem"><em>The problem.</em> Candidates are told to "tailor your CV" with no idea what that means against a specific job. Employers write a job description in ten minutes and then wonder why the applications are wrong. Both sides are guessing at the same document.</p>
-          <p class="built"><em style="font-style:normal; color:var(--ink); font-weight:500">What it is.</em> Put in a CV and the exact role, and get an evidence-based read on where it genuinely matches, where it does not, the shortlist risks, and the changes worth making, with a tailored CV rebuilt only from evidence already in your own. Employers get the same judgement in reverse: a role analysis and a complete hiring pack. Recruitment judgement applied to a specific job, not a generic AI rewrite.</p>
-          <div class="entry-actions">
-            <a class="link-arrow" href="https://recruitment.louisborhani.com" target="_blank" rel="noopener" onclick="trackEvent('ri_candidate_click')">I'm applying for a role &rarr;</a>
-            <a class="link-arrow" href="https://recruitment.louisborhani.com" target="_blank" rel="noopener" onclick="trackEvent('ri_employer_click')">I'm hiring for one &rarr;</a>
+          <p class="proposition">Would your CV actually get shortlisted for this job?</p>
+          <p class="problem"><em>The problem.</em> Candidates are told to "tailor your CV" with no idea what that means against a specific job. Employers write a job description in ten minutes and then wonder why the applications are wrong. Both sides are guessing at the same document, and neither is ever shown the judgement that decides the outcome.</p>
+          <p class="problem"><em>Why I built it.</em> Running a recruitment business means reading CVs against real roles every day, and writing the roles those CVs are answering. The read that produces a shortlist is not complicated and it is not a secret. It is just never written down for the person it affects. A candidate finds out by silence; an employer finds out by a month of wrong applications. Both of those are avoidable before anything is sent.</p>
+          <p class="built"><em style="font-style:normal; color:var(--ink); font-weight:500">What it is.</em> Put in a CV and the exact role, and get an evidence-based read on where it genuinely matches, where it does not, the shortlist risks, and the changes worth making, with a tailored CV rebuilt only from evidence already in your own. It will not invent experience you do not have, because that is what gets found out at interview. Employers get the same judgement in reverse: a role analysis, a job description people understand, screening criteria and interview questions. Recruitment judgement applied to a specific job, not a generic AI rewrite.</p>
+          <div class="entry-actions" id="ri-actions" data-ri-state="closed">
+            <a class="link-arrow" id="ri-cta-see" href="https://recruitment.louisborhani.com" target="_blank" rel="noopener" onclick="trackEvent('ri_see_click')">See Recruitment Intelligence &rarr;</a>
+            <a class="link-arrow" id="ri-cta-candidate" href="https://recruitment.louisborhani.com/candidate" target="_blank" rel="noopener" onclick="trackEvent('ri_candidate_click')" hidden>Check my CV against a job &mdash; &pound;1 &rarr;</a>
+            <a class="link-arrow" id="ri-cta-employer" href="https://recruitment.louisborhani.com/employer" target="_blank" rel="noopener" onclick="trackEvent('ri_employer_click')" hidden>Build a hiring pack &mdash; &pound;1 &rarr;</a>
           </div>
         </div>
       </article>
@@ -643,6 +651,32 @@
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && nav.classList.contains('nav-open')) { setOpen(false); toggle.focus(); }
     });
+  })();
+
+  /* Recruitment Intelligence call to action: information state by default,
+     priced state only once the product itself reports that it is open.
+
+     The closed CTA is what is in the markup, so no-JS visitors, a blocked
+     request and a failed request all land on the honest wording. The priced
+     CTAs appear only on an explicit {"open":true} from the product, which is
+     the same switch that opens its checkout — so this page cannot advertise a
+     price for a journey that is switched off. Enabling it is this swap and
+     nothing else: same section, same copy, different call to action. */
+  (function () {
+    var wrap = document.getElementById('ri-actions');
+    if (!wrap || typeof window.fetch !== 'function') { return; }
+    var see = document.getElementById('ri-cta-see');
+    var priced = [document.getElementById('ri-cta-candidate'), document.getElementById('ri-cta-employer')];
+    if (!see || priced.indexOf(null) !== -1) { return; }
+    fetch('https://recruitment.louisborhani.com/api/launch-status', { credentials: 'omit' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d || d.open !== true) { return; }
+        see.hidden = true;
+        priced.forEach(function (a) { a.hidden = false; });
+        wrap.setAttribute('data-ri-state', 'open');
+      })
+      .catch(function () { /* stay closed */ });
   })();
 
   /* Carry campaign parameters through to outbound destinations so a TikTok or
