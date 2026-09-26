@@ -62,6 +62,7 @@
     --amber-ink: #6F5822;
     --amber-hi: #D9BE74;
     --on-dark: #B6B3AA;
+    --err: #F0A79C;
     --on-dark-hi: #DAD6CC;
     --white: #FFFFFF;
     box-sizing: border-box;
@@ -283,6 +284,35 @@
   .behind img { width: 100%; height: auto; }
   .behind figcaption { margin-top: 10px; font-size: 12.5px; color: var(--slate-2); letter-spacing: 0.02em; }
 
+  /* ENQUIRY FORM — lives on the dark close band, so it borrows the band's
+     palette rather than introducing one. Same type scale, same 2px radius,
+     same button as every other action on the site. */
+  .talk-form { margin-top: 34px; max-width: 620px; }
+  .talk-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
+  .talk-field { margin-top: 20px; }
+  .talk-field label { display: block; font-family: 'Instrument Sans', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--on-dark); margin-bottom: 9px; }
+  .talk-field input, .talk-field textarea {
+    width: 100%; font-family: inherit; font-size: 16.5px; line-height: 1.55; color: var(--white);
+    background: rgba(247,244,237,0.05); border: 1px solid var(--rule-dark); border-radius: 2px;
+    padding: 12px 14px; transition: border-color .15s ease, background .15s ease;
+  }
+  .talk-field textarea { resize: vertical; min-height: 96px; }
+  .talk-field input:hover, .talk-field textarea:hover { border-color: rgba(247,244,237,0.3); }
+  .talk-field input:focus, .talk-field textarea:focus { outline: none; border-color: var(--amber-hi); background: rgba(247,244,237,0.08); }
+  .talk-field input[aria-invalid="true"], .talk-field textarea[aria-invalid="true"] { border-color: var(--err); }
+  .talk-error { margin-top: 8px; font-size: 14px; color: var(--err); }
+  .talk-hp { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .talk-submit { margin-top: 28px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+  .talk-note { font-size: 13.5px; color: var(--on-dark); }
+  .talk-status { margin-top: 20px; font-size: 15.5px; line-height: 1.6; max-width: 54ch; }
+  .talk-status:empty { margin-top: 0; }
+  .talk-status a { border-bottom: 1.5px solid var(--amber-hi); padding-bottom: 2px; font-weight: 600; color: var(--white); }
+  .talk-status.is-ok { color: var(--amber-hi); }
+  .talk-status.is-bad { color: var(--err); }
+  button.btn { cursor: pointer; font-family: 'Instrument Sans', sans-serif; }
+  button.btn[disabled] { opacity: 0.6; cursor: default; }
+  @media (max-width: 620px) { .talk-row { grid-template-columns: 1fr; } }
+
   [hidden] { display: none !important; }
 
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
@@ -301,10 +331,10 @@
       <a href="#router">Where to start</a>
       <a href="#how-i-work">How I work</a>
       <a href="#thinking">Thinking</a>
-      <a class="nav-menu-cta" href="#direct" onclick="trackEvent('work_with_louis_click','nav')">Work with me</a>
+      <a class="nav-menu-cta" href="#talk" onclick="trackEvent('work_with_louis_click','nav')">Talk to Louis</a>
     </div>
     <div class="nav-actions">
-      <a class="nav-cta" href="#direct" onclick="trackEvent('work_with_louis_click','nav')">Work with me</a>
+      <a class="nav-cta" href="#talk" onclick="trackEvent('work_with_louis_click','nav')">Talk to Louis</a>
       <button class="nav-toggle" type="button" id="nav-toggle" aria-expanded="false" aria-controls="nav-links">
         <span class="nav-bars" aria-hidden="true"></span>Menu
       </button>
@@ -322,8 +352,8 @@
       <h1 class="h-xl">I build businesses. And fix the things that stop them growing.</h1>
       <p class="lede hero-lede">I run and build businesses across recruitment, business intelligence and AI, and I work directly with owners when growth, people or operating systems need fixing.</p>
       <div class="hero-actions">
-        <a class="btn btn-solid" href="#router" onclick="trackEvent('hero_find_route')">Find the right place to start</a>
-        <a class="btn btn-line" href="#direct" onclick="trackEvent('work_with_louis_click','hero')">Discuss a business problem</a>
+        <a class="btn btn-solid" href="#talk" onclick="trackEvent('work_with_louis_click','hero')">Talk through my business</a>
+        <a class="btn btn-line" href="#built" onclick="trackEvent('hero_see_built')">See what I've built</a>
       </div>
       <p class="hero-meta">Founder of Easy Talent &nbsp;·&nbsp; Built Clarity Intelligence and Recruitment Intelligence</p>
     </div>
@@ -491,12 +521,17 @@
         </span>
         <span class="router-go">Recruitment Intelligence &rarr;</span>
       </a>
-      <a class="router-row" href="#direct" onclick="trackEvent('route_complex_problem')">
+      <!-- FUTURE — the intelligence-report entry point belongs here, as one more router
+           row ("What opportunities is your business missing?") feeding a dedicated route.
+           The row pattern below takes it with no structural change. Deliberately not built
+           and deliberately not hinted at anywhere in the copy: nothing on this site should
+           imply Louis OS can produce that report until it actually can. -->
+      <a class="router-row" href="#talk" onclick="trackEvent('route_complex_problem')">
         <span>
-          <span class="router-q">It's bigger than one product</span>
-          <span class="router-a">People, commercial performance, operations and technology tangled together. Talk to me directly.</span>
+          <span class="router-q">The business itself needs fixing</span>
+          <span class="router-a">Growth, people, commercial performance, operations or technology are tangled together.</span>
         </span>
-        <span class="router-go">Work with me &rarr;</span>
+        <span class="router-go">Talk it through with Louis &rarr;</span>
       </a>
     </div>
   </div>
@@ -540,7 +575,7 @@
     </div>
 
     <div style="margin-top:46px">
-      <a class="btn btn-solid" href="mailto:hello@louisborhani.com?subject=Operating%20system%20problem" onclick="trackEvent('how_i_work_click')">I have an operating-system problem</a>
+      <a class="btn btn-solid" href="#talk" onclick="trackEvent('how_i_work_click')">Show me what this could look like in my business</a>
     </div>
   </div>
 </section>
@@ -614,12 +649,46 @@
       </div>
     </div>
 
-    <div class="close-actions">
-      <h2 class="h-md" style="max-width:20ch">Building something difficult?</h2>
-      <p class="close-note">Tell me what is happening and what you are trying to achieve. If I think I can materially help, we will have a conversation. If I don't, I will tell you that instead.</p>
-      <div style="margin-top:26px">
-        <a class="btn btn-solid" href="mailto:hello@louisborhani.com?subject=Discuss%20a%20business%20problem" onclick="trackEvent('work_with_louis_click','close')">Discuss a business problem</a>
-      </div>
+    <div class="close-actions" id="talk" tabindex="-1">
+      <h2 class="h-md" style="max-width:22ch">Something important isn't working?</h2>
+      <p class="close-note">Tell me what is going on, what you have already tried and what you are trying to achieve. I will tell you whether I think I can materially help. If I don't think I can, I will tell you that instead.</p>
+
+      <form class="talk-form" id="talk-form" method="post" action="/api/enquiry" novalidate>
+        <div class="talk-row">
+          <div class="talk-field">
+            <label for="f-name">Your name</label>
+            <input id="f-name" name="name" type="text" autocomplete="name" maxlength="120" required>
+            <p class="talk-error" id="e-name" hidden>Please add your name.</p>
+          </div>
+          <div class="talk-field">
+            <label for="f-company">Company</label>
+            <input id="f-company" name="company" type="text" autocomplete="organization" maxlength="160">
+          </div>
+        </div>
+        <div class="talk-field">
+          <label for="f-reply">Email</label>
+          <input id="f-reply" name="reply" type="email" autocomplete="email" maxlength="254" required>
+          <p class="talk-error" id="e-reply" hidden>Please add an email address I can reply to.</p>
+        </div>
+        <div class="talk-field">
+          <label for="f-situation">What&rsquo;s going on?</label>
+          <textarea id="f-situation" name="situation" rows="3" maxlength="4000" required></textarea>
+          <p class="talk-error" id="e-situation" hidden>Please tell me what is going on.</p>
+        </div>
+        <div class="talk-field">
+          <label for="f-goal">What are you trying to achieve?</label>
+          <textarea id="f-goal" name="goal" rows="3" maxlength="4000"></textarea>
+        </div>
+        <div class="talk-hp" aria-hidden="true">
+          <label for="f-website">Leave this empty</label>
+          <input id="f-website" name="website" type="text" tabindex="-1" autocomplete="off">
+        </div>
+        <div class="talk-submit">
+          <button class="btn btn-solid" type="submit" id="talk-send">Send it to Louis</button>
+          <p class="talk-note">Goes straight to me. No newsletter, no sequence, no CRM.</p>
+        </div>
+        <p class="talk-status" id="talk-status" role="status" aria-live="polite"></p>
+      </form>
     </div>
   </div>
 </section>
@@ -631,7 +700,7 @@
     <div class="foot-grid">
       <div>
         <div class="foot-name">Louis Borhani</div>
-        <div class="foot-role">Founder of Easy Talent. Building Clarity Intelligence, Recruitment Intelligence and the operating layer underneath them.</div>
+        <div class="foot-role">Founder of Easy Talent. Building Clarity Intelligence, Recruitment Intelligence and Louis OS &mdash; the operating layer underneath them.</div>
       </div>
       <div class="foot-links">
         <a href="https://easytalentgroup.com" target="_blank" rel="noopener">Easy Talent</a>
@@ -709,6 +778,111 @@
         wrap.setAttribute('data-ri-state', 'open');
       })
       .catch(function () { /* stay closed */ });
+  })();
+
+  /* Enquiry form. Posts to /api/enquiry, which emails it straight to Louis.
+     If that cannot deliver for any reason, the visitor is not told "sorry" and
+     left to retype four fields: their own words are handed back in a
+     pre-filled email, so the enquiry still reaches him. */
+  (function () {
+    var form = document.getElementById('talk-form');
+    if (!form) { return; }
+    var status = document.getElementById('talk-status');
+    var button = document.getElementById('talk-send');
+    var FIELDS = [
+      { id: 'f-name', err: 'e-name', check: function (v) { return v.length > 0; } },
+      { id: 'f-reply', err: 'e-reply', check: function (v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); } },
+      { id: 'f-situation', err: 'e-situation', check: function (v) { return v.length > 0; } }
+    ];
+
+    function val(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
+
+    function mark(f, ok) {
+      var el = document.getElementById(f.id), err = document.getElementById(f.err);
+      if (!el) { return; }
+      el.setAttribute('aria-invalid', ok ? 'false' : 'true');
+      if (err) { err.hidden = ok; }
+    }
+
+    function validate() {
+      var first = null;
+      FIELDS.forEach(function (f) {
+        var ok = f.check(val(f.id));
+        mark(f, ok);
+        if (!ok && !first) { first = document.getElementById(f.id); }
+      });
+      if (first) { first.focus(); }
+      return !first;
+    }
+
+    /* Re-validate a field once it has been flagged, so the error clears as
+       soon as it is fixed rather than only on the next submit. */
+    FIELDS.forEach(function (f) {
+      var el = document.getElementById(f.id);
+      if (!el) { return; }
+      el.addEventListener('input', function () {
+        if (el.getAttribute('aria-invalid') === 'true') { mark(f, f.check(val(f.id))); }
+      });
+    });
+
+    function say(message, tone) {
+      status.className = 'talk-status' + (tone ? ' is-' + tone : '');
+      status.textContent = message;
+    }
+
+    function fallback(payload) {
+      var body = 'From: ' + payload.name
+        + (payload.company ? '\nCompany: ' + payload.company : '')
+        + '\n\nWhat\u2019s going on?\n' + payload.situation
+        + '\n\nWhat I\u2019m trying to achieve\n' + (payload.goal || '');
+      var href = 'mailto:hello@louisborhani.com?subject='
+        + encodeURIComponent('Enquiry from ' + payload.name) + '&body=' + encodeURIComponent(body);
+      say('That did not send from here. ', 'bad');
+      var a = document.createElement('a');
+      a.href = href;
+      a.textContent = 'Send it as an email instead';
+      a.addEventListener('click', function () { trackEvent('enquiry_fallback'); });
+      status.appendChild(a);
+      status.appendChild(document.createTextNode(' \u2014 everything you typed is already in it.'));
+    }
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      say('');
+      if (!validate()) { return; }
+
+      var payload = {
+        name: val('f-name'), company: val('f-company'),
+        reply: val('f-reply'), situation: val('f-situation'), goal: val('f-goal'),
+        website: val('f-website')
+      };
+
+      trackEvent('enquiry_submit');
+      button.disabled = true;
+      button.textContent = 'Sending\u2026';
+
+      fetch('/api/enquiry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).then(function (r) {
+        if (r.ok) {
+          trackEvent('enquiry_sent');
+          form.reset();
+          button.textContent = 'Send it to Louis';
+          say('Sent. It comes straight to me and I will come back to you personally.', 'ok');
+          return;
+        }
+        button.disabled = false;
+        button.textContent = 'Send it to Louis';
+        if (r.status === 429) { say('That has already been sent. Give it a moment.', 'bad'); return; }
+        fallback(payload);
+      }).catch(function () {
+        button.disabled = false;
+        button.textContent = 'Send it to Louis';
+        fallback(payload);
+      });
+    });
   })();
 
   /* Carry campaign parameters through to outbound destinations so a TikTok or
