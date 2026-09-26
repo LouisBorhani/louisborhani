@@ -146,7 +146,7 @@
 
   .portrait { position: relative; }
   .portrait figure { aspect-ratio: 4 / 5; overflow: hidden; background: var(--cream-2); }
-  .portrait img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 34%; }
+  .portrait img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%; }
   .portrait figcaption { margin-top: 12px; font-size: 12.5px; color: var(--slate-2); letter-spacing: 0.02em; }
 
   .btn { display: inline-block; font-family: 'Instrument Sans', sans-serif; font-size: 15px; font-weight: 600; padding: 14px 24px; border-radius: 2px; border: 1px solid transparent; transition: background .15s ease, color .15s ease, border-color .15s ease; }
@@ -252,7 +252,7 @@
     .hero-grid { grid-template-columns: 1fr; gap: 30px; }
     .portrait { order: -1; }
     .portrait figure { aspect-ratio: 5 / 4; }
-    .portrait img { object-position: 50% 26%; }
+    .portrait img { object-position: 50% 10%; }
     .hero-actions .btn { width: 100%; text-align: center; }
     .nav-toggle { display: inline-flex; }
     .nav-links {
@@ -276,6 +276,12 @@
 
   /* the question a visitor actually arrives with, set as the entry's proposition */
   .entry .proposition { margin-top: 20px; font-family: 'Fraunces', Georgia, serif; font-size: clamp(19px, 1.85vw, 23.5px); line-height: 1.45; color: var(--ink); max-width: 44ch; }
+
+  /* behind-the-scenes still. Sized to what the source actually supports, with
+     intrinsic width/height so it reserves its own space and shifts nothing. */
+  .behind { margin-top: 30px; max-width: 216px; }
+  .behind img { width: 100%; height: auto; }
+  .behind figcaption { margin-top: 10px; font-size: 12.5px; color: var(--slate-2); letter-spacing: 0.02em; }
 
   [hidden] { display: none !important; }
 
@@ -323,7 +329,7 @@
     </div>
     <div class="portrait">
       <figure>
-        <img src="/img/louis-portrait.webp" alt="Louis Borhani recording a podcast episode" fetchpriority="high" decoding="async">
+        <img src="/img/louis-portrait.webp" alt="Louis Borhani" fetchpriority="high" decoding="async">
       </figure>
     </div>
   </div>
@@ -338,6 +344,16 @@
     </div>
     <div class="story-body measure">
       <h2 class="h-lg" style="margin-bottom:26px">Most of what I've built exists because I needed it in a real business first.</h2>
+      <!-- LOUIS TO CONFIRM — two biography claims were requested for this section but are
+           NOT supported by anything in the accessible source estate, so they are deliberately
+           unpublished rather than written from assumption. Searched: both git repositories
+           including full commit history, the filesystem, and the Louis OS memory registers,
+           for "Mott MacDonald", "Construction Project Manager", "Project Manager",
+           "construction", "10 years recruitment", "recruitment specialist" and
+           "recruitment experience". Zero corroborating hits.
+             (a) Construction / project-management background — employer, role title, dates.
+             (b) Approximately ten years in recruitment — the actual figure and start year.
+           Confirm the wording and it drops straight into the paragraph below. -->
       <p>I started in recruitment. That is where you learn, quickly and unforgivingly, that most commercial problems are people problems wearing a different coat. A pipeline that stalls, a team that churns, a manager who was promoted and never taught how to manage: these are the same problem viewed from different corners of the business.</p>
       <p>So I stopped advising and started operating. I have run multi-million pound businesses, managed hundreds of staff across multiple sectors, and worked with everyone from entry-level hires to the C-suite. Running something is a different discipline from recommending it. You carry the payroll, the compliance, the client who is unhappy on a Friday afternoon, and the decision nobody else wants to make.</p>
       <p>Easy Talent came out of that. Then the products came out of Easy Talent, because the same friction kept appearing and buying software to fix it kept disappointing me. <strong>If you have run the business, you know which problems are actually worth solving</strong>, and you build a narrower, more useful thing than somebody designing from the outside.</p>
@@ -354,6 +370,8 @@
     <p class="lede" style="color:var(--on-dark); margin-top:22px; max-width:56ch">Plenty of people know recruitment. Plenty know operations. Fewer have carried both, and then built the software underneath them.</p>
     <div class="proof-grid">
       <div class="proof-item">
+        <!-- LOUIS TO CONFIRM — if the ten-years-in-recruitment figure is confirmed it belongs
+             here as the tenure proof point, alongside the operating scale already stated. -->
         <div class="proof-figure">Operator,<br>not observer</div>
         <p>Multi-million pound businesses run directly, and hundreds of staff managed across multiple sectors. Not a deck about how it should be done.</p>
       </div>
@@ -542,6 +560,10 @@
         </a>
         <h3 class="h-md" style="margin-top:22px; max-width:22ch">Recruitment agencies vs sustainable resourcing</h3>
         <p class="body-lg" style="margin-top:14px; color:var(--slate); max-width:52ch">If a placed candidate leaves after the guarantee period, you have already paid the fee and get no rebate. What Easy Talent builds with you instead is long term: the team grows with you rather than resetting to zero.</p>
+        <figure class="behind">
+          <img src="/img/hero-podcast.webp" width="360" height="640" loading="lazy" decoding="async" alt="A podcast episode being recorded: two people talking in a sound-treated studio, seen past the camera">
+          <figcaption>Where the episodes get made.</figcaption>
+        </figure>
       </div>
       <div class="think-list">
         <div class="think-item"><div class="t">Recruitment &amp; hiring</div><div class="v">Why panic hiring always costs more than planning ahead.</div></div>
@@ -634,6 +656,16 @@
     if (placement) { evt.placement = placement; }
     try { window.lbEvents.push(evt); } catch (e) {}
     try { window.dispatchEvent(new CustomEvent('lb:event', { detail: evt })); } catch (e) {}
+    /* Forward to Vercel Web Analytics when it is present. It is first-party and
+       cookieless, served from this same deployment, so there is no third-party
+       marketing stack and no consent banner to add. While it is switched off,
+       window.va does not exist and this is a no-op: nothing loads, nothing is
+       sent, and the events still collect locally on window.lbEvents. */
+    try {
+      if (typeof window.va === 'function') {
+        window.va('event', { name: name, data: placement ? { placement: placement } : undefined });
+      }
+    } catch (e) {}
   }
 
   (function () {
