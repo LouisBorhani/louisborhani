@@ -6,18 +6,42 @@
  * Nothing here is added on signup — only on confirmation, from data carried
  * inside the token itself, never from a database (there isn't one).
  *
- * NOTE ON VERIFIED-VS-UNVERIFIED API SHAPE — read before changing this file:
- * The contact create/update call below (resendUpsertContact) is verified only
- * to the extent published third-party documentation could confirm from this
- * environment (direct access to api.resend.com and resend.com's own docs is
- * blocked here). The exact JSON field names for applying a Topic subscription
- * to a contact were NOT independently confirmed against a live call before
- * this was written. It is deliberately isolated in one small function
- * (applyTopicSubscriptions) so it can be corrected without touching anything
- * else, and every requested topic is also written to a plain contact
- * property (below) as a fallback — so even if that one call's shape needs
- * fixing after the first real test, the record of what was actually
- * requested and when is never lost.
+ * API SHAPE — verified live against the real account via the official Resend
+ * MCP integration on 2026-09-27, not inferred:
+ *   - POST /contacts is a true upsert keyed by email. Confirmed by creating
+ *     the same address twice: same contact ID both times, second call's
+ *     first_name overwrote the first, status 201 both times. There is no
+ *     duplicate-conflict case to handle, so the earlier create-then-fall-
+ *     back-to-PATCH logic was solving a problem that does not exist and has
+ *     been removed.
+ *   - The raw wire field is `first_name` (snake_case) — confirmed by reading
+ *     the actual logged request body of a live call, not the MCP tool's own
+ *     (camelCase) parameter name, which is the tool's own interface and does
+ *     not by itself prove the underlying REST field name.
+ *   - Contacts are never required to belong to a Segment/Audience. Confirmed:
+ *     the account's one existing Segment ("General") is unrelated to Topics,
+ *     and creation with no segmentId works. (Segments matter only for
+ *     Broadcasts, which target a segmentId and have no topic-based targeting
+ *     at all — a separate concern from this confirmation flow, not handled
+ *     here.)
+ *   - Topic subscriptions are set with PATCH /contacts/{email}/topics,
+ *     confirmed as the real endpoint from two live calls' logged method and
+ *     path — not the nested per-topic endpoint this file originally guessed,
+ *     which was wrong. One call updates any number of topics at once.
+ *     `subscription` is the string enum "opt_in" | "opt_out", never a
+ *     boolean. The one thing that could not be fully confirmed: the logged
+ *     request body for this specific route rendered as "{}" for both test
+ *     calls (apparently a gap in this endpoint's own request logging, not
+ *     something within reach to work around), so the exact JSON key wrapping
+ *     the topics array is taken from the official tool's documented
+ *     parameter shape (`{ topics: [{ id, subscription }] }`) rather than
+ *     independently confirmed byte-for-byte.
+ *   - Verified live: subscribing a contact to two Topics at once, then
+ *     unsubscribing from only one, left the other's subscription untouched —
+ *     independent per-topic state, exactly as required.
+ *   - Verified live: neither list-contact-topics nor get-contact exposes any
+ *     timestamp for when a topic subscription changed — see the project's
+ *     final report for the consent-history conclusion this supports.
  */
 
 const token = require("../lib/token.js");
@@ -25,11 +49,6 @@ const token = require("../lib/token.js");
 const RESEND_API = "https://api.resend.com";
 const REPLY_TO = process.env.NEWSLETTER_REPLY_TO || "louis@easytgroup.com";
 const SITE_URL = (process.env.SITE_URL || "https://louisborhani.com").replace(/\/$/, "");
-// Optional: only needed if this Resend account still requires contacts to
-// belong to an Audience/Segment. Left unset, the code calls the newer global
-// Contacts endpoint. Set this only if the global endpoint is confirmed to
-// reject creation without one.
-const AUDIENCE_ID = process.env.NEWSLETTER_AUDIENCE_ID || "";
 
 const TOPICS = {
   "business-insights": { id: process.env.NEWSLETTER_TOPIC_BUSINESS || "", label: "Business Insights" },
@@ -75,48 +94,40 @@ function send(res, status, title, bodyHtml, trackConfirmed) {
 }
 
 /**
- * Create-or-update by email. Tries create first; if the account rejects it
- * as a duplicate, falls back to an update call keyed by email. This makes a
- * repeat confirmation (someone clicking an old link twice, or re-confirming
- * after unsubscribing) safe either way, regardless of which behaviour this
- * Resend account's Contacts API actually has for an existing address.
+ * POST /contacts unconditionally upserts by email — verified live, not
+ * assumed. A repeat confirmation therefore just overwrites the same
+ * properties on the same contact; there is no conflict case to fall back
+ * from.
  */
 async function resendUpsertContact(key, { email, firstName, properties }) {
-  const base = AUDIENCE_ID ? `${RESEND_API}/audiences/${AUDIENCE_ID}/contacts` : `${RESEND_API}/contacts`;
-  const body = JSON.stringify({ email, first_name: firstName || undefined, unsubscribed: false, properties });
-
-  let r = await fetch(base, {
+  const r = await fetch(`${RESEND_API}/contacts`, {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body,
-  });
-  if (r.ok) return { ok: true };
-
-  // Duplicate-address case: fall back to an update. Not logging the response
-  // body — it may echo the request back, and we never log email addresses
-  // beyond what's needed to see *that* something failed.
-  r = await fetch(`${base}/${encodeURIComponent(email)}`, {
-    method: "PATCH",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body,
+    body: JSON.stringify({ email, first_name: firstName || undefined, unsubscribed: false, properties }),
   });
   return { ok: r.ok, status: r.status };
 }
 
-/** Isolated on purpose — see the file-level note on unverified API shape. */
+/**
+ * One call sets every requested topic's subscription at once — verified live
+ * against the real endpoint (see the file-level note for what was and was
+ * not independently confirmed about the exact body shape).
+ */
 async function applyTopicSubscriptions(key, email, topicKeys) {
-  const results = await Promise.allSettled(
-    topicKeys.map((k) => {
-      const topicId = TOPICS[k]?.id;
-      if (!topicId) return Promise.reject(new Error(`no topic id configured for ${k}`));
-      return fetch(`${RESEND_API}/contacts/${encodeURIComponent(email)}/topics/${encodeURIComponent(topicId)}`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ subscribed: true }),
-      }).then((r) => ({ topic: k, ok: r.ok, status: r.status }));
-    }),
-  );
-  return results.map((r) => (r.status === "fulfilled" ? r.value : { ok: false, error: String(r.reason) }));
+  const topics = topicKeys
+    .map((k) => (TOPICS[k]?.id ? { id: TOPICS[k].id, subscription: "opt_in" } : null))
+    .filter(Boolean);
+  if (topics.length !== topicKeys.length) {
+    console.error(`[newsletter] missing topic id configuration for ${topicKeys.length - topics.length} requested topic(s)`);
+  }
+  if (!topics.length) return { ok: false, status: 0 };
+
+  const r = await fetch(`${RESEND_API}/contacts/${encodeURIComponent(email)}/topics`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ topics }),
+  });
+  return { ok: r.ok, status: r.status };
 }
 
 module.exports = async (req, res) => {
@@ -156,12 +167,11 @@ module.exports = async (req, res) => {
     return send(res, 502, "Something went wrong", `<p>We couldn't complete this. Please try again, or email <a href="mailto:${REPLY_TO}">${REPLY_TO}</a> directly.</p>`);
   }
 
-  const topicResults = await applyTopicSubscriptions(key, email, topics);
-  const topicFailures = topicResults.filter((r) => !r.ok);
-  if (topicFailures.length) {
+  const topicResult = await applyTopicSubscriptions(key, email, topics);
+  if (!topicResult.ok) {
     // The contact exists and requested_topics is recorded either way — this
     // is logged so it can be caught and corrected, not silently lost.
-    console.error(`[newsletter] topic subscription call failed for ${topicFailures.length}/${topics.length} topic(s) — contact created, requested_topics property retained as fallback`);
+    console.error(`[newsletter] topic subscription call failed (status ${topicResult.status}) — contact created, requested_topics property retained as fallback`);
   }
 
   const chosen = topics.map((k) => TOPICS[k]?.label || k).join(" and ");
