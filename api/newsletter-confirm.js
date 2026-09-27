@@ -8,12 +8,14 @@
  *
  * API SHAPE — verified live against the real account via the official Resend
  * MCP integration on 2026-09-27, not inferred:
- *   - POST /contacts is a true upsert keyed by email. Confirmed by creating
- *     the same address twice: same contact ID both times, second call's
- *     first_name overwrote the first, status 201 both times. There is no
- *     duplicate-conflict case to handle, so the earlier create-then-fall-
- *     back-to-PATCH logic was solving a problem that does not exist and has
- *     been removed.
+ *   - POST /contacts is a true upsert keyed by email: confirmed by creating
+ *     the same address twice, same contact ID both times, second call's
+ *     first_name overwrote the first, status 201 both times. It's still used
+ *     that way here for a genuinely new contact. For an existing one this
+ *     file uses PATCH /contacts/{email} instead — see ensureContact — because
+ *     POST was also confirmed to reset `unsubscribed` to false whenever it's
+ *     omitted or sent false, even on a contact already unsubscribed, and
+ *     PATCH was confirmed not to.
  *   - The raw wire field is `first_name` (snake_case) — confirmed by reading
  *     the actual logged request body of a live call, not the MCP tool's own
  *     (camelCase) parameter name, which is the tool's own interface and does
@@ -53,12 +55,22 @@
  * contact still returns 201 rather than erroring, which is what makes it
  * safe to run on every confirmation click, not just the first.
  *
- * The `unsubscribed` field on that same upsert is NOT preserve-if-omitted,
- * confirmed live: a test contact set to unsubscribed:true, then upserted
- * again with the field left out entirely, came back unsubscribed:false --
- * the API applies its own default (false) whenever the field is absent, for
- * a brand-new contact and an existing one alike. A stale or replayed confirm
- * link must therefore never hardcode false; see resendUpsertContact.
+ * The `unsubscribed` field needed two rounds to get right. First found live:
+ * POST does NOT preserve it when omitted -- a test contact set to true, then
+ * upserted again with the field left out entirely, still came back false.
+ * So a hardcoded false on every confirmation (the original code) was a real
+ * bug, capable of silently reversing a real global unsubscribe on a repeat
+ * or replayed link. Reading the existing value first and passing it back
+ * into the same POST closed that specific hole but left a narrow GET-then-
+ * POST race against a global unsubscribe landing in between the two calls.
+ * Closed properly by switching an existing contact to PATCH instead, which
+ * was confirmed live -- in both directions, true and false, with the raw
+ * request body inspected to confirm the field was genuinely absent from the
+ * wire, not just from this code's own arguments -- to leave the field alone
+ * entirely when it's omitted. So an existing contact's global subscription
+ * state is now never written by this file at all; only a brand-new contact
+ * (404 on the read) gets an explicit false, which is also its own confirmed
+ * default. See ensureContact.
  */
 
 const token = require("../lib/token.js");
@@ -112,34 +124,43 @@ function send(res, status, title, bodyHtml, trackConfirmed) {
 }
 
 /**
- * POST /contacts unconditionally upserts by email — verified live, not
- * assumed. But the `unsubscribed` field is not preserved when omitted:
- * verified live that omitting it entirely still resets an already-globally-
- * unsubscribed contact back to subscribed, exactly like sending `false`
- * would -- there is no "leave unchanged" option at the API level. So a
- * repeat or replayed confirmation link must read the contact's current
- * state first and pass that same value straight back, never a hardcoded
- * false, or it would silently reverse an intervening global unsubscribe.
- * A genuinely new contact (no existing record, a 404 on the read) verified
- * live to default to unsubscribed: false either way, so this changes
- * nothing for a first-time confirmation.
+ * POST /contacts (create) is only used for a genuinely new contact -- a 404
+ * on the GET below -- where it's verified live to default unsubscribed to
+ * false. For an existing contact this uses PATCH /contacts/{email} instead,
+ * deliberately never sending `unsubscribed` at all: verified live, in both
+ * directions, that a PATCH which omits the field preserves whatever the
+ * contact's current global subscription state already is (true stays true,
+ * false stays false), unlike POST, which was confirmed to reset an omitted
+ * or false-valued `unsubscribed` back to subscribed regardless of the
+ * contact's prior state. Reading first and branching on 404 removes the
+ * earlier read-then-write race where the same value read could go stale
+ * between the read and a POST written on top of it -- there's no window
+ * here where this code itself sends a value for that field on an existing
+ * contact at all, so there's nothing for a race to overwrite. Global
+ * subscription state is left exclusively to Resend's own unsubscribe and
+ * re-consent mechanisms, never touched by this confirmation flow once a
+ * contact already exists.
  */
-async function resendUpsertContact(key, { email, firstName, properties }) {
+async function ensureContact(key, { email, firstName, properties }) {
   const existing = await fetch(`${RESEND_API}/contacts/${encodeURIComponent(email)}`, {
     method: "GET",
     headers: { Authorization: `Bearer ${key}` },
   });
-  let unsubscribed = false;
-  if (existing.status !== 404) {
-    if (!existing.ok) return { ok: false, status: existing.status };
-    const data = await existing.json();
-    unsubscribed = !!data.unsubscribed;
-  }
 
-  const r = await fetch(`${RESEND_API}/contacts`, {
-    method: "POST",
+  if (existing.status === 404) {
+    const r = await fetch(`${RESEND_API}/contacts`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ email, first_name: firstName || undefined, unsubscribed: false, properties }),
+    });
+    return { ok: r.ok, status: r.status };
+  }
+  if (!existing.ok) return { ok: false, status: existing.status };
+
+  const r = await fetch(`${RESEND_API}/contacts/${encodeURIComponent(email)}`, {
+    method: "PATCH",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ email, first_name: firstName || undefined, unsubscribed, properties }),
+    body: JSON.stringify({ first_name: firstName || undefined, properties }),
   });
   return { ok: r.ok, status: r.status };
 }
@@ -220,7 +241,7 @@ module.exports = async (req, res) => {
   // call here is idempotent, so all three are attempted every time this link
   // is opened -- a retry converges on the same end state rather than needing
   // to know what already succeeded.
-  const contactResult = await resendUpsertContact(key, { email, firstName, properties });
+  const contactResult = await ensureContact(key, { email, firstName, properties });
   if (!contactResult.ok) {
     console.error(`[newsletter] contact upsert failed (status ${contactResult.status || "n/a"})`);
     return send(res, 502, "Something went wrong", `<p>We couldn't complete this. Please try again, or email <a href="mailto:${REPLY_TO}">${REPLY_TO}</a> directly.</p>`);
