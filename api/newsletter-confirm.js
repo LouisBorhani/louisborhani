@@ -52,6 +52,13 @@
  * path, status 201. Confirmed idempotent too -- re-adding an already-enrolled
  * contact still returns 201 rather than erroring, which is what makes it
  * safe to run on every confirmation click, not just the first.
+ *
+ * The `unsubscribed` field on that same upsert is NOT preserve-if-omitted,
+ * confirmed live: a test contact set to unsubscribed:true, then upserted
+ * again with the field left out entirely, came back unsubscribed:false --
+ * the API applies its own default (false) whenever the field is absent, for
+ * a brand-new contact and an existing one alike. A stale or replayed confirm
+ * link must therefore never hardcode false; see resendUpsertContact.
  */
 
 const token = require("../lib/token.js");
@@ -106,15 +113,33 @@ function send(res, status, title, bodyHtml, trackConfirmed) {
 
 /**
  * POST /contacts unconditionally upserts by email — verified live, not
- * assumed. A repeat confirmation therefore just overwrites the same
- * properties on the same contact; there is no conflict case to fall back
- * from.
+ * assumed. But the `unsubscribed` field is not preserved when omitted:
+ * verified live that omitting it entirely still resets an already-globally-
+ * unsubscribed contact back to subscribed, exactly like sending `false`
+ * would -- there is no "leave unchanged" option at the API level. So a
+ * repeat or replayed confirmation link must read the contact's current
+ * state first and pass that same value straight back, never a hardcoded
+ * false, or it would silently reverse an intervening global unsubscribe.
+ * A genuinely new contact (no existing record, a 404 on the read) verified
+ * live to default to unsubscribed: false either way, so this changes
+ * nothing for a first-time confirmation.
  */
 async function resendUpsertContact(key, { email, firstName, properties }) {
+  const existing = await fetch(`${RESEND_API}/contacts/${encodeURIComponent(email)}`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${key}` },
+  });
+  let unsubscribed = false;
+  if (existing.status !== 404) {
+    if (!existing.ok) return { ok: false, status: existing.status };
+    const data = await existing.json();
+    unsubscribed = !!data.unsubscribed;
+  }
+
   const r = await fetch(`${RESEND_API}/contacts`, {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ email, first_name: firstName || undefined, unsubscribed: false, properties }),
+    body: JSON.stringify({ email, first_name: firstName || undefined, unsubscribed, properties }),
   });
   return { ok: r.ok, status: r.status };
 }
