@@ -299,6 +299,44 @@
     .foot-grid { flex-direction: column; }
   }
 
+  /* NEWSLETTER SIGNUP — light-band variant of the enquiry form's field
+     treatment (same tokens, same shapes), since this block sits on a light
+     section rather than the dark close band. One component, reused from the
+     footer via an anchor rather than duplicated as a second form. */
+  .news-block { margin-top: 56px; padding-top: 44px; border-top: 1px solid var(--rule); }
+  .news-head { max-width: 46ch; }
+  .news-head h3 { font-family: 'Instrument Sans', sans-serif; font-weight: 700; font-size: clamp(22px, 2.4vw, 28px); letter-spacing: -0.015em; }
+  .news-head p { margin-top: 10px; font-size: 16px; color: var(--slate); }
+  .news-form { margin-top: 30px; max-width: 640px; }
+  .news-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
+  .news-field { margin-top: 18px; }
+  .news-field:first-child { margin-top: 0; }
+  .news-field label { display: block; font-family: 'Instrument Sans', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--slate-2); margin-bottom: 9px; }
+  .news-field input[type="text"], .news-field input[type="email"] {
+    width: 100%; font-family: inherit; font-size: 16.5px; line-height: 1.55; color: var(--ink);
+    background: var(--white); border: 1px solid var(--rule); border-radius: 2px;
+    padding: 12px 14px; transition: border-color .15s ease;
+  }
+  .news-field input:hover { border-color: rgba(20,22,31,0.3); }
+  .news-field input:focus { outline: none; border-color: var(--amber-ink); }
+  .news-field input[aria-invalid="true"] { border-color: var(--err); }
+  .news-topics { margin-top: 22px; display: flex; flex-direction: column; gap: 12px; }
+  .news-topic { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; background: var(--cream-2); border: 1px solid var(--rule); border-radius: 3px; cursor: pointer; transition: border-color .15s ease, background .15s ease; }
+  .news-topic:hover { border-color: rgba(20,22,31,0.3); }
+  .news-topic:has(input:checked) { border-color: var(--amber-ink); background: #F1E9D2; }
+  .news-topic input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--amber-ink); flex-shrink: 0; }
+  .news-topic-copy strong { display: block; font-family: 'Instrument Sans', sans-serif; font-size: 15.5px; font-weight: 700; color: var(--ink); }
+  .news-topic-copy span { display: block; margin-top: 3px; font-size: 14px; line-height: 1.5; color: var(--slate); }
+  .news-error { margin-top: 8px; font-size: 14px; color: var(--err); }
+  .news-hp { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .news-submit { margin-top: 24px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+  .news-note { font-size: 13.5px; color: var(--slate-2); }
+  .news-status { margin-top: 18px; font-size: 15px; line-height: 1.6; max-width: 54ch; }
+  .news-status:empty { margin-top: 0; }
+  .news-status.is-ok { color: var(--amber-ink); }
+  .news-status.is-bad { color: var(--err); }
+  @media (max-width: 620px) { .news-row { grid-template-columns: 1fr; } .news-submit { flex-direction: column; align-items: stretch; } .news-submit .btn { width: 100%; } }
+
   /* touch targets: extend hit area without shifting layout */
   .nav-links a, .foot-links a, .think-foot a { position: relative; }
   .nav-links a::after, .foot-links a::after, .think-foot a::after { content: ""; position: absolute; left: 0; right: 0; top: -11px; bottom: -11px; }
@@ -716,6 +754,56 @@
          repository and has not been supplied, so the second route is deliberately
          not built: a "Business insights" link with nowhere correct to go is worse
          than no link. Supply the URL and this becomes two labelled routes. -->
+
+    <div class="news-block" id="newsletter">
+      <div class="news-head">
+        <h3>Get the useful stuff in your inbox</h3>
+        <p>Two emails. Two different audiences. Choose what&rsquo;s relevant.</p>
+      </div>
+
+      <form class="news-form" id="news-form" method="post" action="/api/newsletter-subscribe" novalidate>
+        <div class="news-row">
+          <div class="news-field">
+            <label for="n-name">First name <span style="text-transform:none; font-weight:500; letter-spacing:0">(optional)</span></label>
+            <input id="n-name" name="firstName" type="text" autocomplete="given-name" maxlength="80">
+          </div>
+          <div class="news-field">
+            <label for="n-email">Email</label>
+            <input id="n-email" name="email" type="email" autocomplete="email" maxlength="254" required>
+            <p class="news-error" id="n-e-email" hidden>Please add an email address.</p>
+          </div>
+        </div>
+
+        <div class="news-topics" role="group" aria-describedby="n-e-topics">
+          <label class="news-topic">
+            <input type="checkbox" name="topics" value="business-insights">
+            <span class="news-topic-copy">
+              <strong>Business Insights</strong>
+              <span>Practical thinking on growth, AI, systems and building more efficient, more profitable businesses.</span>
+            </span>
+          </label>
+          <label class="news-topic">
+            <input type="checkbox" name="topics" value="recruitment-career">
+            <span class="news-topic-copy">
+              <strong>Recruitment &amp; Career</strong>
+              <span>CVs, interviews, job search and how recruitment actually works.</span>
+            </span>
+          </label>
+        </div>
+        <p class="news-error" id="n-e-topics" hidden>Please choose at least one.</p>
+
+        <div class="news-hp" aria-hidden="true">
+          <label for="n-company">Leave this empty</label>
+          <input id="n-company" name="company" type="text" tabindex="-1" autocomplete="off">
+        </div>
+
+        <div class="news-submit">
+          <button class="btn btn-solid" type="submit" id="news-send">Join the list</button>
+          <p class="news-note">One confirmation email, then only what you asked for.</p>
+        </div>
+        <p class="news-status" id="news-status" role="status" aria-live="polite"></p>
+      </form>
+    </div>
   </div>
 </section>
 
@@ -841,6 +929,7 @@
         <a href="https://recruitment.louisborhani.com" target="_blank" rel="noopener">Recruitment Intelligence</a>
         <a href="https://www.linkedin.com/in/louis-borhani/" target="_blank" rel="noopener" onclick="trackEvent('social_linkedin_click')">LinkedIn</a>
         <a href="https://www.tiktok.com/@louis.hires" target="_blank" rel="noopener" onclick="trackEvent('social_tiktok_click')">TikTok &middot; career advice</a>
+        <a href="#newsletter">Newsletter</a>
         <a href="mailto:hello@louisborhani.com">Contact</a>
       </div>
     </div>
@@ -1098,6 +1187,105 @@
         button.disabled = false;
         button.textContent = 'Send it to Louis';
         fallback(payload);
+      });
+    });
+  })();
+
+  /* Newsletter signup. Posts to /api/newsletter-subscribe, which only ever
+     sends a confirm-link email — nobody is added to Resend from this form
+     directly, so there is nothing here for a bot to poison even if it gets
+     past the honeypot and the throttle. */
+  (function () {
+    var form = document.getElementById('news-form');
+    if (!form) { return; }
+    var status = document.getElementById('news-status');
+    var button = document.getElementById('news-send');
+    var emailEl = document.getElementById('n-email');
+    var emailErr = document.getElementById('n-e-email');
+    var topicsErr = document.getElementById('n-e-topics');
+    var startedFired = false;
+
+    function checkedTopics() {
+      return Array.prototype.slice.call(form.querySelectorAll('input[name="topics"]:checked')).map(function (el) { return el.value; });
+    }
+
+    function markStarted() {
+      if (startedFired) { return; }
+      startedFired = true;
+      trackEvent('newsletter_signup_started');
+    }
+    emailEl.addEventListener('focus', markStarted);
+    document.getElementById('n-name').addEventListener('focus', markStarted);
+    Array.prototype.forEach.call(form.querySelectorAll('input[name="topics"]'), function (el) {
+      el.addEventListener('change', function () {
+        markStarted();
+        trackEvent('newsletter_topic_selected', el.value);
+      });
+    });
+
+    function say(message, tone) {
+      status.className = 'news-status' + (tone ? ' is-' + tone : '');
+      status.textContent = message;
+    }
+
+    function validate() {
+      var email = emailEl.value.trim();
+      var emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      emailEl.setAttribute('aria-invalid', emailOk ? 'false' : 'true');
+      emailErr.hidden = emailOk;
+
+      var topicsOk = checkedTopics().length > 0;
+      topicsErr.hidden = topicsOk;
+
+      if (!emailOk) { emailEl.focus(); return false; }
+      if (!topicsOk) { return false; }
+      return true;
+    }
+
+    emailEl.addEventListener('input', function () {
+      if (emailEl.getAttribute('aria-invalid') === 'true') {
+        emailErr.hidden = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailEl.value.trim());
+        emailEl.setAttribute('aria-invalid', emailErr.hidden ? 'false' : 'true');
+      }
+    });
+    Array.prototype.forEach.call(form.querySelectorAll('input[name="topics"]'), function (el) {
+      el.addEventListener('change', function () { if (checkedTopics().length > 0) { topicsErr.hidden = true; } });
+    });
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      say('');
+      if (!validate()) { return; }
+
+      var payload = {
+        email: emailEl.value.trim(),
+        firstName: document.getElementById('n-name').value.trim(),
+        topics: checkedTopics(),
+        company: document.getElementById('n-company').value.trim()
+      };
+
+      button.disabled = true;
+      button.textContent = 'Sending\u2026';
+
+      fetch('/api/newsletter-subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).then(function (r) {
+        button.disabled = false;
+        button.textContent = 'Join the list';
+        if (r.ok) {
+          trackEvent('newsletter_confirmation_sent');
+          form.reset();
+          say('Check your inbox \u2014 one email to confirm, then you\u2019re on the list.', 'ok');
+          return;
+        }
+        if (r.status === 429) { say('That has already been sent. Give it a moment.', 'bad'); return; }
+        say('That did not send. Please try again in a moment.', 'bad');
+      }).catch(function () {
+        button.disabled = false;
+        button.textContent = 'Join the list';
+        say('That did not send. Please try again in a moment.', 'bad');
       });
     });
   })();
