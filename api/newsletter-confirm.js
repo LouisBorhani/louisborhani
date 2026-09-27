@@ -42,6 +42,16 @@
  *   - Verified live: neither list-contact-topics nor get-contact exposes any
  *     timestamp for when a topic subscription changed — see the project's
  *     final report for the consent-history conclusion this supports.
+ *
+ * Broadcasts turned out to target a Segment *and* an optional Topic together
+ * (Resend natively suppresses a Segment member who is opted out of the
+ * Broadcast's Topic at send time) — so General only needs to be one broad
+ * "has confirmed a subscription" list, not one segment per stream. Adding a
+ * contact to it is POST /contacts/{email}/segments/{segmentId}, verified
+ * live the same way as the calls above: real call, real logged method and
+ * path, status 201. Confirmed idempotent too -- re-adding an already-enrolled
+ * contact still returns 201 rather than erroring, which is what makes it
+ * safe to run on every confirmation click, not just the first.
  */
 
 const token = require("../lib/token.js");
@@ -49,6 +59,7 @@ const token = require("../lib/token.js");
 const RESEND_API = "https://api.resend.com";
 const REPLY_TO = process.env.NEWSLETTER_REPLY_TO || "louis@easytgroup.com";
 const SITE_URL = (process.env.SITE_URL || "https://louisborhani.com").replace(/\/$/, "");
+const GENERAL_SEGMENT_ID = process.env.NEWSLETTER_SEGMENT_GENERAL || "";
 
 const TOPICS = {
   "business-insights": { id: process.env.NEWSLETTER_TOPIC_BUSINESS || "", label: "Business Insights" },
@@ -109,6 +120,24 @@ async function resendUpsertContact(key, { email, firstName, properties }) {
 }
 
 /**
+ * General is the broad "has confirmed a subscription" list every confirmed
+ * contact belongs to, regardless of which Topic(s) they chose -- a Topic
+ * opt-out must never remove someone from it, so nothing here (or anywhere
+ * else in this codebase) ever calls the corresponding remove endpoint.
+ */
+async function addToGeneralSegment(key, email) {
+  if (!GENERAL_SEGMENT_ID) {
+    console.error("[newsletter] NEWSLETTER_SEGMENT_GENERAL not set — cannot enrol in the General segment");
+    return { ok: false, status: 0 };
+  }
+  const r = await fetch(`${RESEND_API}/contacts/${encodeURIComponent(email)}/segments/${GENERAL_SEGMENT_ID}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}` },
+  });
+  return { ok: r.ok, status: r.status };
+}
+
+/**
  * One call sets every requested topic's subscription at once — verified live
  * against the real endpoint (see the file-level note for what was and was
  * not independently confirmed about the exact body shape).
@@ -161,10 +190,20 @@ module.exports = async (req, res) => {
     requested_topics: topics.join(","),
   };
 
+  // Confirmation is only complete once all three states hold: the contact
+  // exists, they're in General, and their chosen Topic(s) are opt_in. Every
+  // call here is idempotent, so all three are attempted every time this link
+  // is opened -- a retry converges on the same end state rather than needing
+  // to know what already succeeded.
   const contactResult = await resendUpsertContact(key, { email, firstName, properties });
   if (!contactResult.ok) {
     console.error(`[newsletter] contact upsert failed (status ${contactResult.status || "n/a"})`);
     return send(res, 502, "Something went wrong", `<p>We couldn't complete this. Please try again, or email <a href="mailto:${REPLY_TO}">${REPLY_TO}</a> directly.</p>`);
+  }
+
+  const segmentResult = await addToGeneralSegment(key, email);
+  if (!segmentResult.ok) {
+    console.error(`[newsletter] General segment enrolment failed (status ${segmentResult.status}) — contact exists, subscription not yet complete`);
   }
 
   const topicResult = await applyTopicSubscriptions(key, email, topics);
@@ -172,6 +211,18 @@ module.exports = async (req, res) => {
     // The contact exists and requested_topics is recorded either way — this
     // is logged so it can be caught and corrected, not silently lost.
     console.error(`[newsletter] topic subscription call failed (status ${topicResult.status}) — contact created, requested_topics property retained as fallback`);
+  }
+
+  if (!segmentResult.ok || !topicResult.ok) {
+    // Never claim success on a partial state. The link is still valid and
+    // every call above is safe to repeat, so the fix is just clicking it
+    // again -- not a new signup.
+    return send(
+      res,
+      502,
+      "Almost there",
+      `<p>We couldn't finish setting up your subscription${firstName ? `, ${firstName}` : ""}. Nothing is wrong with what you submitted — please click the confirmation link again to finish. If it keeps happening, email <a href="mailto:${REPLY_TO}">${REPLY_TO}</a> directly.</p>`,
+    );
   }
 
   const chosen = topics.map((k) => TOPICS[k]?.label || k).join(" and ");
